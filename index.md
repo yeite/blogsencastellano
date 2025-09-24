@@ -1,5 +1,5 @@
 ---
-title: Blogs con Ñ
+title: Blogs con ñ
 ---
 
 <h1>Blogs con ñ</h1>
