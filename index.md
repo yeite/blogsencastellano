@@ -1,8 +1,8 @@
 ---
-layout: null
+title: Blogs con ñ
 ---
 
-# Blogs en Castellano
+
 
 **Blogs que voy encontrando en la web y recopilando pero que aún no se sumaron al directorio. Si te encuentras en el listado, ¡estoy esperando que me enviés tu blog!**
 
