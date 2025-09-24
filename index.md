@@ -9,6 +9,7 @@ title: Blogs con ñ
 _¿Quieres formar parte del directorio en español ¡Blog!¡Blog!?_ [Envíame tu blog](https://blogsencastellano.wordpress.com/enviame-tu-blog/)
 
 <br/>
+
 **Última actualización: {{ page.last_update | date: "%d de %B de %Y" }}**
 
 
@@ -52,7 +53,8 @@ _¿Quieres formar parte del directorio en español ¡Blog!¡Blog!?_ [Envíame tu
 ## **D**  
 - [Dabi](https://dabi.bearblog.dev)  
 - [Daniel Aragay](https://dabi.bearblog.dev)  
-- [Daniel Sanz](https://dabi.bearblog.dev)  
+- [Daniel Sanz](https://dabi.bearblog.dev)
+- [Danirod](https://dabi.bearblog.dev)
 - [Diarios interplanetarios](https://write.as)  
 - [Diego López](https://diegologs.com)  
   
@@ -121,7 +123,8 @@ _¿Quieres formar parte del directorio en español ¡Blog!¡Blog!?_ [Envíame tu
 - [Neosite](https://nacsan.com)  
 - [Nevat blog](https://nevatblog.duckdns.org)  
 - [None](https://dc-none.blogspot.com)  
-- [Nos gusta Linux](https://dc-none.blogspot.com)  
+- [Nos gusta Linux](https://dc-none.blogspot.com)
+- [No soy vago, soy eficiente](https://nosoyvagosoyeficiente.wordpress.com)
 - [Noxtor](https://dc-none.blogspot.com)  
   
 ## **O**  
