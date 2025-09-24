@@ -1,9 +1,9 @@
 ---
-title: Blogs con ñ
-layout: default
+title: Blogs con Ñ
 ---
 
-<link rel="stylesheet" href="/assets/css/style.css">
+<h1>Blogs con ñ</h1>
+
 
 
 ### Blogs que voy encontrando en la web y recopilando
