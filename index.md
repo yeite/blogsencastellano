@@ -2,8 +2,6 @@
 title: Blogs con ñ
 ---
 
-<h1>Blogs con ñ</h1>
-
 
 
 ### Blogs que voy encontrando en la web y recopilando
