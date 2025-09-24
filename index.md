@@ -1,8 +1,20 @@
 ---
-title: Blogs en Castellano
+layout: null
 ---
 
-# Blogs con ñ  
+# Blogs en Castellano
+
+**Blogs que voy encontrando en la web y recopilando pero que aún no se sumaron al directorio. Si te encuentras en el listado, ¡estoy esperando que me enviés tu blog!**
+
+**Última actualización: {{ page.last_modified_at | date: "%d de %B de %Y" }}**
+
+---
+
+## Menú A-Z
+
+[A](#a) – [B](#b) – [C](#c) – [D](#d) – [E](#e) – [F](#f) – [G](#g) – [H](#h) – [I](#i) – [J](#j) – [K](#k) – [L](#l) – [M](#m) – [N](#n) – [O](#o) – [P](#p) – [Q](#q) – [R](#r) – [S](#s) – [T](#t) – [U](#u) – [V](#v) – [W](#w) – [X](#x) – [Y](#y) – [Z](#z)
+
+---
   
 ## **A**  
 - [56K](https://56k.es)  
