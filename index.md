@@ -1,12 +1,18 @@
 ---
-title: Blogs con ñ
+title: Blogs con Ñ
+last_update: 2025-09-24
 ---
 
 
 
-**Blogs que voy encontrando en la web y recopilando pero que aún no se sumaron al directorio. Si te encuentras en el listado, ¡estoy esperando que me enviés tu blog!**
+### Blogs que voy encontrando en la web y recopilando
 
-**Última actualización: {{ page.last_modified_at | date: "%d de %B de %Y" }}**
+**¿Quieres formar parte del directorio en español ¡Blog!¡Blog!? [Envíame tu blog](https://blogsencastellano.wordpress.com/enviame-tu-blog/)
+
+
+**Última actualización: {{ page.last_update | date: "%d de %B de %Y" }}**
+
+
 
 ---
 
