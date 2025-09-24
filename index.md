@@ -1,8 +1,9 @@
 ---
-title: Blogs con Ñ
-last_update: 2025-09-24
+title: Blogs con ñ
+layout: default
 ---
 
+<link rel="stylesheet" href="/assets/css/style.css">
 
 
 ### Blogs que voy encontrando en la web y recopilando
