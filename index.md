@@ -8,9 +8,9 @@ last_update: 2025-09-24
 
 
 
-### Blogs Que Voy Encontrando En La Web Y Recopilando
+### Blogs que voy encontrando en la web Y recopilando
 
-_¿Quieres Formar Parte Del Directorio En Español ¡Blog!¡Blog!?_ [Envíame Tu Blog](https://Blogsencastellano.Wordpress.Com/Enviame-Tu-Blog/)
+_¿Quieres formar parte del directorio en español ¡Blog!¡Blog!?_ [Envíame tu Blog](https://Blogsencastellano.Wordpress.Com/Enviame-Tu-Blog/)
 
 <Br/>
 
