@@ -1,16 +1,16 @@
 ---
 Title: Blogs con ñ
 Layout: Default
-last_update: 2025-09-24
+last_update: 2025-09-29
 
 ---
 
 
 
 
-### Blogs que voy encontrando en la web Y recopilando
+### Blogs que voy encontrando en la web y recopilando
 
-_¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame tu Blog](https://Blogsencastellano.wordpress.com/Enviame-Tu-Blog/)
+_¿Quieres formar parte del directorio en español ¡Blog!¡Blog!?_ [Envíame tu Blog](https://Blogsencastellano.wordpress.com/Enviame-Tu-Blog/)
 
 <Br/>
 
@@ -32,11 +32,11 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
   
 ## A
 * [Adri humus](https://adri-humus.vercel.app)
-* [Adrian Peral.es](https://Adrianperales.com)
+* [Adrian Perales](https://Adrianperales.com)
 * [Adrianistan](https://blog.Adrianistan.eu/)
 * [Almotacén En Prácticas](https://almotacenenpracticas.wordpress.com/)
 * [Alt 43](https://alt43.es/)
-* [Apunt.es De Loar](https://loar.albir.eu/)
+* [Apuntes De Loar](https://loar.albir.eu/)
 * [Archienemigos](https://moribundo.flounder.online/)
 * [Ardi](https://ardi.monster/)
 * [Ari](https://ari.monster/)
@@ -60,16 +60,18 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 * [Brucknerite](https://brucknerite.net)
   
 ## C
-* [Cajon D.esastre](https://ccriss92.bearblog.dev/)  
+* [Cajon Desastre](https://ccriss92.bearblog.dev/)  
 * [Cartas De Berni](https://.escritura.social/berniethewordsmith/)  
 * [Cartas Dirigidas Al Fuego](https://cartasalfuego.mataroa.blog/)  
 * [Ccriss92](https://ccriss92.bearblog.dev/)
 * [Cerodah](https://cerodah.github.io/blog/)  
 * [Chocoboreview](https://chocoboreview.neocities.org/) 
-* [Cozy Kis](https://cozy-kis.bearblog.dev/blog/) 
-* [Cuaderno De Filosofías De Ficcion.es Posibl.es](https://cuaderno.Ricardramon.net)
-* [Cuaderno Informatica](https://www.cuadernoinformatica.com/) 
+* [Cozy Kis](https://cozy-kis.bearblog.dev/blog/)
+* [Crónicas Digitales](https://cronicasdigitales.mr-bytes.com)  
 * [Cronicas Freelancer](https://cronicasfreelancer.com/)  
+* [Cuaderno De Filosofías De Ficciones Posibles](https://cuaderno.Ricardramon.net)
+* [Cuaderno Informatica](https://www.cuadernoinformatica.com/) 
+* 
   
 ## D  
 * [Dabi](https://fabi.bearblog.dev/)
@@ -87,6 +89,7 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 * [El Blog De Asturel](https://blog.Asturel.Nohost.me/)
 * [El Blog De Lazaro](https://Elblogdelazaro.org/)
 * [El Bocadillo De Tortilla](https://www.lynze.net)
+* [El condón roto de GNU](https://elcondonrotodegnu.wordpress.com/)
 * [El cuaderno Sin hojas](https://sinhojas.net)
 * [El cuaderno](https://cuaderno.jesusysustics.com/)
 * [El cuarto De Gato Oscuro](https://Gatooscuro.xyz/)
@@ -99,9 +102,9 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 * [El Sueño Del Artista Blog](https://polotman.wordpress.com/)
 * [End3R.es](https://www.end3r.es/)
 * [Entre Bits](https://entrebits.org/)
-* [Entre Dragon.es Y Pinguinos](https://angel.esbroullon.gitlab.io/entredragon.esypinguinos/archives/)
-* [.escritos En La Nube](https://nube.codeberg.page/blog/)
-* [.esencial](https://esencial.matizeta.com)
+* [Entre Dragones Y Pinguinos](https://angel.esbroullon.gitlab.io/entredragon.esypinguinos/archives/)
+* [Escritos En La Nube](https://nube.codeberg.page/blog/)
+* [Esencial](https://esencial.matizeta.com)
 * [Eureka](https://danielmarin.naukas.com/) 
   
 ## F  
@@ -133,11 +136,13 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 ## J  
 * [Jack Moreno](https://jackmoreno.com/)
 * [Jana Del Bosco](https://janadelbosco.vercel.app)
+* [Jaritag](https://jartigag.blog)
 * [Jdrm](https://jdrm.info/)
 * [Jinversor](https://jinversor.co/)
 * [Jlogp](https://jlogp.org/)
 * [Jodida Pero No Sorprendida](https://jodidaperonosorprendida.mataroa.blog)
-* [Juan Agustin Flor.es](https://juanagustinflores.wordpress.com/)
+* [JosemiGT](https://josemigt.dev/)
+* [Juan Agustin Flores](https://juanagustinflores.wordpress.com/)
 * [Jurassikdev34](https://jurassikdev34.com)
 * [Jvare](https://jvare.com/)
 
@@ -148,22 +153,24 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 ## L  
 * [La Bitácora De Locutus](https://locutusbit.blogspot.com/)
 * [La Bitacora De Un Eterno Aprendiz](https://altgr.xyz/)
+* [La cueva de Beckermatic](https://arielbecker.com/)
 * [La Llave De Las Palabras](https://lallavedelaspalabras.wordpress.com)
-* [La Loca Del D.esván](https://locadeldesvan.com/)
+* [La Loca Del Desván](https://locadeldesvan.com/)
 * [La Loica](https://laloica.noblogs.org)
 * [La Máquina De Von Neumann](https://vonneumannmachine.wordpress.com)
 * [La Penúltima Osadía](https://dualmind.wixsite.com/lapenultimaosadia)
-* [La Piña Y El D.esfiladero](https://apocalipsislento.bearblog.dev/)
+* [La Piña Y El Desfiladero](https://apocalipsislento.bearblog.dev/)
 * [Labaudric](https://web.labaudric.net/)
 * [Lado B](https://Ladob.matizeta.com)
 * [Last Dragon](https://www.lastdragon.net/)
-* [Lo Nec.esario Imposible](https://escritura.social/srmoshuelo/)
+* [Los Desvaríos de Dam](https://dam.bearblog.dev)
+* [Lo Necesario Imposible](https://escritura.social/srmoshuelo/)
 * [Los Relatos De Ibnussabel](https://ibnussabel.com/)
 * [Luis carlos Pando](https://luiscarlospando.com)	
   
 ## M  
 * [Madrid Y El cine](https://madridyelcine.blogspot.com/)
-* [Ma.estro De Nada](https://josemoya.blogspot.com/)
+* [Maestro De Nada](https://josemoya.blogspot.com/)
 * [Mal Partida](https://malpartida.bearblog.dev/)
 * [Malditas Ediciones](https://malditas-ediciones.blogspot.com/)
 * [Manje.net](https://blog.manje.net)
@@ -185,7 +192,8 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 * [Noxtor](https://notxor.nueva-actitud.org/)  
   
 ## O  
-* [Ocho Bits hacen Un Byte](https://www.ochobitshacenunbyte.com/)  
+* [Ocho Bits hacen Un Byte](https://www.ochobitshacenunbyte.com/)
+* [Ocubom's Blog](https://ocubom.page/es/post/) 
 * [Otro Blog Mas](https://Obm.corcoles.net/)  
   
 ## P  
@@ -193,7 +201,7 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 * [Papa Friki](https://www.papafriki.es)
 * [Papel continuo](https://papelcontinuo.net/)
 * [Parlem De Llibres](https://vsantos.envs.net)
-* [Películas Y Seri.es](https://Peliculasyseries.matizeta.com)
+* [Películas Y Series](https://Peliculasyseries.matizeta.com)
 * [Picand codigo](http://picandocodigo.net/)
 * [Piumaster](https://alejandropiumetti.com.ar/)
 * [Plr Blog](https://pedrolr.es/blog/)
@@ -209,15 +217,16 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 * [Queroseno](https://queroseno.nekoweb.org/)  
   
 ## R  
-* [Red.es Nu.estras](https://redesnuestras.net/)  
+* [Redes Nuestras](https://redesnuestras.net/)  
 * [Reflejos De Oscuros Sueños](https://rdos.ddns.net/bludit/)  
   
 ## S  
 * [Santa Virgen](https://santavirgen.wordpress.com/)
 * [Sergio](https://tr4ck.net/~sergio/)
-* [Si Dios Te Da Limon.es](https://sidiostedalimones.com/)
-* [Si Lo hac.es, hazlo Bien!](https://vctrsnts.github.io)
+* [Si Dios Te Da Limones](https://sidiostedalimones.com/)
+* [Si Lo haces, hazlo Bien!](https://vctrsnts.github.io)
 * [Sicksadnation](https://sicksadnation.wordpress.com)
+* [Skrlet13's](https://www.skrlet13.xyz/es/)
 * [Sl1200](https://proxy.dystopic.world)
 * [Smorita](https://srmorita.xyz)
 * [Spectrumgirl](https://sopadeletras.club/spectrumgirl/)
@@ -232,11 +241,12 @@ _¿Quier.es formar parte del directorio en .español ¡Blog!¡Blog!?_ [Envíame 
 * [The_chei$](https://thecheis.com)
 * [The Private coffe](https://theprivatecoffee.com/blog/)  
 * [Tiflonet](https://www.tiflonet.com/)  
-* [Torr.es Burriel](https://escritura.social/torresburriel/)  
+* [Torres Burriel](https://escritura.social/torresburriel/)  
 * [Tmpjg](https://www.tmpjg.xyz/)  
 * [Transistemas](https://transistemas.wordpress.com/)  
 * [Trotenkaza](https://trotenkaza.bearblog.dev/)  
-* [Tzinm](https://tzinm.me/)   
+* [Tzinm](https://tzinm.me/)
+* [Tu Nube Seca Mi Río](https://tunubesecamirio.com)
 
 ## U
 * [Ubuntu Peronista](https://ubuntuperonista.blogspot.com)
