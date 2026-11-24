@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TubeFlow TV - Guía de Programación en Vivo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono para estética EPG -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome para iconos de TV y controles -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        tv: {
+                            bg: '#090b10',
+                            panel: '#11151f',
+                            card: '#181e2c',
+                            hover: '#222a3d',
+                            border: '#263045',
+                            accent: '#00e5ff',
+                            live: '#ff2a5f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos personalizados mínimos para scrollbars EPG y efectos CRT/OSD */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090b10;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #263045;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #384663;
+        }
+
+        /* Efecto sutil de líneas de escaneo en el reproductor cuando está en pausa/cargando */
+        .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Animación OSD */
+        @keyframes osdFadeIn {
+            0% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .osd-animate {
+            animation: osdFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Ocultar flechas de inputs numéricos */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-tv-bg text-slate-100 font-sans h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- ================= HEADER / BARRA SUPERIOR ================= -->
+    <header class="bg-tv-panel border-b border-tv-border px-4 py-2.5 flex items-center justify-between shrink-0 z-30">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid fa-tv text-white text-base"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-extrabold text-lg tracking-tight text-white">TubeFlow <span class="text-tv-accent">TV</span></h1>
+                    <span class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-tv-live/20 text-tv-live border border-tv-live/30 font-bold flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-tv-live animate-pulse"></span> EN VIVO
+                    </span>
+                </div>
+                <p class="text-[11px] text-slate-400 hidden sm:block">Guía Interactiva de Canales Lineales YouTube</p>
+            </div>
+        </div>
+
+        <!-- Reloj Digital en Tiempo Real y Botón Admin -->
+        <div class="flex items-center gap-3 sm:gap-4">
+            <div class="hidden md:flex items-center gap-2 text-xs text-slate-400 bg-tv-bg/60 px-3 py-1.5 rounded-lg border border-tv-border/60">
+                <i class="fa-regular fa-keyboard text-slate-500"></i>
+                <span>Usa <kbd class="px-1.5 py-0.5 bg-tv-card rounded text-slate-200 font-mono text-[10px]">↑</kbd> <kbd class="px-1.5 py-0.5 bg-tv-card rounded text-slate-200 font-mono text-[10px]">↓</kbd> o números para zapping</span>
+            </div>
+
+            <div class="bg-tv-bg px-3 py-1.5 rounded-lg border border-tv-border flex items-center gap-2">
+                <i class="fa-regular fa-clock text-tv-accent text-xs"></i>
+                <span id="live-clock" class="font-mono text-sm font-bold text-slate-100">00:00:00</span>
+            </div>
+
+            <button id="btn-open-admin" class="bg-tv-card hover:bg-tv-hover text-slate-100 border border-tv-border hover:border-tv-accent/50 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 shadow-sm cursor-pointer">
+                <i class="fa-solid fa-sliders text-tv-accent"></i>
+                <span class="hidden sm:inline">Administrar Canales / Guía</span>
+                <span class="sm:hidden">Canales</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ================= SECCIÓN SUPERIOR: REPRODUCTOR TV + INFO ================= -->
+    <section class="bg-black border-b border-tv-border shrink-0 flex flex-col lg:flex-row h-[38vh] min-h-[240px] max-h-[420px] relative">
+        
+        <!-- Contenedor del Video (16:9 fluido) -->
+        <div id="player-wrapper" class="relative flex-1 bg-black overflow-hidden flex items-center justify-center group">
+            <!-- Div donde se monta el IFrame de YouTube -->
+            <div id="yt-player" class="w-full h-full pointer-events-none"></div>
+            
+            <!-- Capa sutil CRT y escudo para evitar pausas accidentales con clic en iframe -->
+            <div class="absolute inset-0 crt-overlay z-10"></div>
+
+            <!-- Pantalla de Estado / Error o Autoplay bloqueado -->
+            <div id="player-status-overlay" class="hidden absolute inset-0 bg-tv-bg/90 z-20 flex flex-col items-center justify-center p-6 text-center">
+                <div class="w-12 h-12 rounded-full bg-tv-card border border-tv-border flex items-center justify-center mb-3 text-tv-accent">
+                    <i id="status-icon" class="fa-solid fa-satellite-dish text-xl"></i>
+                </div>
+                <h3 id="status-title" class="text-base font-bold text-white mb-1">Sintonizando señal...</h3>
+                <p id="status-desc" class="text-xs text-slate-400 max-w-md mb-4">Conectando con la transmisión en vivo del canal.</p>
+                <div class="flex flex-wrap items-center justify-center gap-2.5">
+                    <button id="btn-unmute-start" class="hidden bg-tv-accent text-slate-950 font-bold px-4 py-2 rounded-lg text-xs hover:bg-cyan-300 transition cursor-pointer">
+                        <i class="fa-solid fa-volume-high mr-1.5"></i> Activar Sonido e Iniciar TV
+                    </button>
+                    <a id="btn-open-yt-external" href="#" target="_blank" rel="noopener noreferrer" class="hidden bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition items-center gap-1.5 shadow-lg">
+                        <i class="fa-brands fa-youtube"></i> Ver en YouTube ↗
+                    </a>
+                    <button id="btn-skip-next-now" class="hidden bg-tv-card hover:bg-tv-hover border border-tv-border text-slate-200 font-semibold px-3.5 py-2 rounded-lg text-xs transition cursor-pointer">
+                        <i class="fa-solid fa-forward-step mr-1"></i> Saltar ahora
+                    </button>
+                </div>
+            </div>
+
+            <!-- OSD (On-Screen Display) estilo Televisor al cambiar de canal -->
+            <div id="tv-osd" class="hidden absolute top-4 left-4 right-4 sm:right-auto sm:min-w-[380px] max-w-lg bg-tv-panel/95 backdrop-blur-md border border-tv-border/90 rounded-xl p-3.5 shadow-2xl z-20 osd-animate">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div id="osd-ch-badge" class="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 font-mono font-extrabold text-xl text-tv-accent">
+                            101
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span id="osd-ch-name" class="font-bold text-sm text-white uppercase tracking-wide">TECH TV</span>
+                                <span id="osd-ch-cat" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-medium">Tecnología</span>
+                            </div>
+                            <h2 id="osd-prog-title" class="text-sm sm:text-base font-semibold text-slate-100 line-clamp-1 mt-0.5">Cargando programa...</h2>
+                        </div>
+                    </div>
+                </div>
+                <!-- Barra de progreso del programa actual en OSD -->
+                <div class="mt-3">
+                    <div class="flex justify-between text-[11px] font-mono text-slate-400 mb-1">
+                        <span id="osd-time-range">00:00 - 00:00</span>
+                        <span id="osd-remaining" class="text-tv-accent">Restan 0 min</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-tv-bg rounded-full overflow-hidden">
+                        <div id="osd-progress-bar" class="h-full bg-tv-accent transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Indicador de Entrada Numérica (cuando el usuario teclea ej: 103) -->
+            <div id="numeric-zap-osd" class="hidden absolute top-4 right-4 bg-black/85 border border-tv-accent/60 px-4 py-2 rounded-xl font-mono text-2xl font-extrabold text-tv-accent tracking-widest z-30 shadow-lg">
+                1--
+            </div>
+        </div>
+
+        <!-- Panel Lateral Derecho: Info del Programa Actual + Control Remoto TV -->
+        <div class="w-full lg:w-[360px] xl:w-[400px] bg-tv-panel border-t lg:border-t-0 lg:border-l border-tv-border p-3.5 sm:p-4 flex flex-col justify-between shrink-0 z-20">
+            
+            <!-- Detalles de emisión en curso -->
+            <div class="overflow-hidden">
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <div class="flex items-center gap-2">
+                        <span id="info-ch-number" class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-tv-accent/15 text-tv-accent border border-tv-accent/30">CH 101</span>
+                        <span id="info-ch-name" class="text-xs font-bold text-slate-300 uppercase tracking-wider truncate">TECH TV</span>
+                    </div>
+                    <span id="info-live-badge" class="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> SINCRONIZADO
+                    </span>
+                </div>
+
+                <h2 id="info-prog-title" class="text-sm sm:text-base font-bold text-white line-clamp-1">Selecciona un canal</h2>
+                
+                <div class="flex items-center gap-2 text-xs text-slate-400 mt-1 font-mono">
+                    <span id="info-prog-schedule">--:-- - --:--</span>
+                    <span>•</span>
+                    <span id="info-prog-duration">-- min</span>
+                </div>
+
+                <!-- Siguiente programa -->
+                <div class="mt-2.5 pt-2.5 border-t border-tv-border/70 hidden sm:block">
+                    <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">A continuación</div>
+                    <div class="flex items-center justify-between text-xs text-slate-300 gap-2">
+                        <span id="info-next-title" class="truncate font-medium">---</span>
+                        <span id="info-next-time" class="font-mono text-[11px] text-slate-400 shrink-0">--:--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controles Estilo Televisor -->
+            <div class="mt-2 pt-2.5 border-t border-tv-border flex items-center justify-between gap-2">
+                <!-- Zapping CH- / CH+ -->
+                <div class="flex items-center bg-tv-bg rounded-lg border border-tv-border p-0.5">
+                    <button id="btn-ch-down" title="Canal Anterior (Flecha Abajo)" class="px-3 py-1.5 hover:bg-tv-hover rounded-md text-slate-200 transition text-xs font-bold flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-chevron-down text-tv-accent"></i> CH-
+                    </button>
+                    <div class="w-[1px] h-4 bg-tv-border"></div>
+                    <button id="btn-ch-up" title="Canal Siguiente (Flecha Arriba)" class="px-3 py-1.5 hover:bg-tv-hover rounded-md text-slate-200 transition text-xs font-bold flex items-center gap-1 cursor-pointer">
+                        CH+ <i class="fa-solid fa-chevron-up text-tv-accent"></i>
+                    </button>
+                </div>
+
+                <!-- Acciones Rápidas: Mute, Sync Live, OSD Info, Fullscreen -->
+                <div class="flex items-center gap-1.5">
+                    <button id="btn-mute" title="Silenciar / Activar Audio (M)" class="w-9 h-9 rounded-lg bg-tv-bg hover:bg-tv-hover border border-tv-border flex items-center justify-center text-slate-200 transition cursor-pointer">
+                        <i id="icon-mute" class="fa-solid fa-volume-high text-xs"></i>
+                    </button>
+
+                    <button id="btn-sync-live" title="Sincronizar al segundo exacto en vivo" class="px-2.5 h-9 rounded-lg bg-tv-live/15 hover:bg-tv-live/25 border border-tv-live/40 text-tv-live font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span class="hidden sm:inline">Al Vivo</span>
+                    </button>
+
+                    <button id="btn-show-osd" title="Mostrar Info en Pantalla (I)" class="w-9 h-9 rounded-lg bg-tv-bg hover:bg-tv-hover border border-tv-border flex items-center justify-center text-slate-200 transition cursor-pointer">
+                        <i class="fa-solid fa-circle-info text-xs"></i>
+                    </button>
+
+                    <button id="btn-fullscreen" title="Pantalla Completa (F)" class="w-9 h-9 rounded-lg bg-tv-bg hover:bg-tv-hover border border-tv-border flex items-center justify-center text-slate-200 transition cursor-pointer">
+                        <i class="fa-solid fa-expand text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= SECCIÓN INFERIOR: GRILLA DE PROGRAMACIÓN (EPG) ================= -->
+    <main class="flex-1 flex flex-col bg-tv-bg overflow-hidden relative">
+        
+        <!-- Barra de herramientas de la Guía EPG -->
+        <div class="bg-tv-panel/80 border-b border-tv-border px-4 py-2 flex items-center justify-between shrink-0 text-xs">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-table-list text-tv-accent"></i>
+                <span class="font-bold uppercase tracking-wider text-slate-200">Guía de Programación</span>
+                <span id="epg-date-label" class="text-slate-400 hidden sm:inline">• Hoy</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Filtro rápido de categoría -->
+                <select id="epg-category-filter" class="bg-tv-bg border border-tv-border rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-tv-accent">
+                    <option value="ALL">Todos los canales</option>
+                </select>
+
+                <button id="btn-scroll-now" class="bg-tv-card hover:bg-tv-hover border border-tv-border text-slate-200 px-2.5 py-1 rounded-lg font-medium flex items-center gap-1.5 transition cursor-pointer">
+                    <span class="w-2 h-2 rounded-full bg-tv-live"></span>
+                    <span>Ir a Ahora</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Contenedor Maestro con Scroll de la Grilla EPG -->
+        <div id="epg-scroll-container" class="flex-1 overflow-auto relative">
+            <div id="epg-canvas" class="relative min-w-max">
+                
+                <!-- Fila Pegajosa Superior: Eje de Tiempo -->
+                <div class="sticky top-0 z-20 flex bg-tv-panel border-b border-tv-border h-9">
+                    <!-- Esquina superior izquierda fija -->
+                    <div class="sticky left-0 z-30 w-36 sm:w-48 shrink-0 bg-tv-panel border-r border-tv-border px-3 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        <span>Canales</span>
+                        <span class="text-[10px] font-mono text-slate-500">CH</span>
+                    </div>
+                    <!-- Marcas de tiempo (generadas por JS) -->
+                    <div id="epg-timeline-header" class="relative h-full"></div>
+                </div>
+
+                <!-- Filas de Canales y Programas (generadas por JS) -->
+                <div id="epg-channels-body" class="relative divide-y divide-tv-border/60"></div>
+
+                <!-- Línea Roja Vertical Indicadora de la Hora Actual ("AHORA") -->
+                <div id="epg-now-line" class="absolute top-0 bottom-0 w-[2px] bg-tv-live z-10 pointer-events-none shadow-[0_0_8px_rgba(255,42,95,0.8)]" style="left: 0px;">
+                    <div class="sticky top-0 -translate-x-1/2 bg-tv-live text-white text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded-b shadow">
+                        AHORA
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- ================= MODAL DE ADMINISTRACIÓN DE CANALES Y PROGRAMACIÓN ================= -->
+    <div id="admin-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-tv-panel border border-tv-border rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- Header Modal -->
+            <div class="px-5 py-4 border-b border-tv-border flex items-center justify-between bg-tv-card/50 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-tv-accent/20 text-tv-accent flex items-center justify-center">
+                        <i class="fa-solid fa-tower-broadcast"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-white">Estudio de Programación y Canales</h2>
+                        <p class="text-xs text-slate-400">Administra tu grilla lineal. Los cambios se guardan automáticamente en tu navegador.</p>
+                    </div>
+                </div>
+                <button id="btn-close-admin" class="w-8 h-8 rounded-lg bg-tv-bg hover:bg-tv-hover text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Cuerpo del Modal: 2 Columnas (Lista de Canales | Editor de Canal y Playlist) -->
+            <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+                
+                <!-- Columna Izquierda: Lista de Canales + Import/Export -->
+                <div class="w-full md:w-72 border-b md:border-b-0 md:border-r border-tv-border bg-tv-bg/50 flex flex-col shrink-0 max-h-[35vh] md:max-h-none">
+                    <div class="p-3 border-b border-tv-border flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Mis Canales</span>
+                        <button id="btn-new-channel" class="bg-tv-accent hover:bg-cyan-300 text-slate-950 font-bold text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer">
+                            <i class="fa-solid fa-plus"></i> Nuevo Canal
+                        </button>
+                    </div>
+
+                    <!-- Lista renderizada de canales -->
+                    <div id="admin-channel-list" class="flex-1 overflow-y-auto p-2 space-y-1.5"></div>
+
+                    <!-- Herramientas JSON / Backup -->
+                    <div class="p-3 border-t border-tv-border bg-tv-panel/60 space-y-2">
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button id="btn-export-json" class="bg-tv-card hover:bg-tv-hover border border-tv-border text-slate-200 text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer">
+                                <i class="fa-solid fa-download text-tv-accent"></i> Exportar JSON
+                            </button>
+                            <label class="bg-tv-card hover:bg-tv-hover border border-tv-border text-slate-200 text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer">
+                                <i class="fa-solid fa-upload text-emerald-400"></i> Importar JSON
+                                <input type="file" id="input-import-json" accept=".json" class="hidden">
+                            </label>
+                        </div>
+                        <button id="btn-reset-defaults" class="w-full bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/50 text-rose-300 text-xs py-1.5 px-2 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer">
+                            <i class="fa-solid fa-rotate-left"></i> Restaurar canales por defecto
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Edición del Canal Seleccionado y su Parrilla de Videos -->
+                <div id="admin-editor-pane" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+                    <!-- Formulario Datos del Canal -->
+                    <div class="bg-tv-card/60 border border-tv-border rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-tv text-tv-accent"></i> Configuración del Canal
+                            </h3>
+                            <button id="btn-delete-channel" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-rose-950/50 transition cursor-pointer">
+                                <i class="fa-solid fa-trash-can"></i> Eliminar Canal
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <div class="sm:col-span-3">
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Número CH</label>
+                                <input type="number" id="edit-ch-number" min="1" max="999" class="w-full bg-tv-bg border border-tv-border rounded-lg px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-tv-accent">
+                            </div>
+                            <div class="sm:col-span-5">
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Nombre del Canal</label>
+                                <input type="text" id="edit-ch-name" placeholder="Ej: TECH TV" class="w-full bg-tv-bg border border-tv-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-tv-accent">
+                            </div>
+                            <div class="sm:col-span-4">
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Categoría / Color</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="edit-ch-category" placeholder="Tecnología" class="w-full bg-tv-bg border border-tv-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-tv-accent">
+                                    <input type="color" id="edit-ch-color" value="#06b6d4" class="w-10 h-9 p-0.5 bg-tv-bg border border-tv-border rounded-lg cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex justify-end">
+                            <button id="btn-save-channel-meta" class="bg-tv-accent hover:bg-cyan-300 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg transition cursor-pointer">
+                                Guardar Datos del Canal
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Formulario Agregar Nuevo Video a la Parrilla -->
+                    <div class="bg-tv-card/60 border border-tv-border rounded-xl p-4">
+                        <h3 class="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                            <i class="fa-brands fa-youtube text-rose-500"></i> Agregar Programa / Video a la Parrilla
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-3">Pega la URL de YouTube o el ID del video. Nota: algunos canales oficiales (ej. cadenas de noticias o discográficas) bloquean la reproducción fuera de YouTube; usa <strong>Probar inserción</strong> para verificarlo antes de agregar.</p>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <div class="sm:col-span-5">
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">URL o ID de YouTube</label>
+                                <div class="flex gap-1.5">
+                                    <input type="text" id="add-vid-url" placeholder="https://youtu.be/... o ID" class="w-full bg-tv-bg border border-tv-border rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-tv-accent">
+                                    <button id="btn-fetch-yt-meta" title="Obtener título y duración automáticamente" class="bg-tv-panel hover:bg-tv-hover border border-tv-border px-2.5 rounded-lg text-tv-accent text-xs shrink-0 transition cursor-pointer">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    </button>
+                                    <button id="btn-test-embed" title="Comprobar si este video permite inserción externa (sin Error 152)" class="bg-tv-panel hover:bg-tv-hover border border-tv-border px-2.5 rounded-lg text-amber-400 text-xs shrink-0 transition cursor-pointer flex items-center gap-1 font-semibold">
+                                        <i class="fa-solid fa-vial"></i>
+                                        <span class="hidden lg:inline">Probar inserción</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="sm:col-span-4">
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Título del Programa</label>
+                                <input type="text" id="add-vid-title" placeholder="Ej: Especial Inteligencia Artificial" class="w-full bg-tv-bg border border-tv-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-tv-accent">
+                            </div>
+                            <div class="sm:col-span-3">
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Duración (minutos)</label>
+                                <div class="flex gap-1.5">
+                                    <input type="number" id="add-vid-duration" min="1" max="720" value="30" class="w-full bg-tv-bg border border-tv-border rounded-lg px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-tv-accent">
+                                    <button id="btn-add-video" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 rounded-lg text-xs shrink-0 transition cursor-pointer">
+                                        Agregar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="yt-fetch-feedback" class="hidden mt-2 text-[11px] text-amber-400"></div>
+                    </div>
+
+                    <!-- Lista de Programas (Playlist Lineal del Canal) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-bold text-white">Programación del Canal (Bucle Continuo)</h3>
+                            <span id="admin-playlist-total-dur" class="text-xs font-mono text-slate-400">Duración total del ciclo: 0 min</span>
+                        </div>
+                        <div id="admin-playlist-items" class="space-y-2"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor oculto para detectar duración real de videos nuevos mediante YouTube API -->
+    <div id="yt-probe-container" class="hidden">
+        <div id="yt-probe-player"></div>
+    </div>
+
+    <!-- Toast de Notificaciones (reemplaza alert/confirm) -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ================= LÓGICA DE LA APLICACIÓN ================= -->
+    <script>
+        /**
+         * ============================================================================
+         * 1. DATOS INICIALES PRECARGADOS (CANALES Y PROGRAMACIÓN VERIFICADA EMBEBIBLE)
+         * ============================================================================
+         */
+        const DEFAULT_CHANNELS = [
+            {
+                id: 'ch-tech',
+                number: 101,
+                name: 'TECH TV',
+                category: 'Tecnología',
+                color: '#06b6d4',
+                programs: [
+                    { youtubeId: 'aircAruvnKk', title: 'Redes Neuronales y Deep Learning Explicado (3Blue1Brown)', duration: 1153 },
+                    { youtubeId: 'R9OHn5ZF4Uo', title: 'Cómo funcionan los Algoritmos de Inteligencia Artificial', duration: 534 },
+                    { youtubeId: 'zjkBMFhNj_g', title: 'Introducción a los Grandes Modelos de Lenguaje (LLMs)', duration: 3580 },
+                    { youtubeId: 'bBC-nXj3Ng4', title: 'Criptografía y Blockchain al Descubierto', duration: 1581 },
+                    { youtubeId: 'rfscVS0vtbw', title: 'Curso Completo de Python y Desarrollo de Software', duration: 3600 }
+                ]
+            },
+            {
+                id: 'ch-docs',
+                number: 102,
+                name: 'CINE & DOCS',
+                category: 'Documentales',
+                color: '#10b981',
+                programs: [
+                    { youtubeId: 'R6MlUcmOul8', title: 'Tears of Steel - Ciencia Ficción y Efectos Visuales (4K)', duration: 734 },
+                    { youtubeId: 'eRsGyueVLvQ', title: 'Sintel - Película Animada de Fantasía (Blender Studio)', duration: 888 },
+                    { youtubeId: 'aqz-KE-bpKQ', title: 'Big Buck Bunny - Cortometraje 4K 60fps', duration: 635 },
+                    { youtubeId: '_cMxraX_5RE', title: 'Spring - Aventura en las Montañas (Blender Open Movie)', duration: 464 },
+                    { youtubeId: 'WhWc3b3KhnY', title: 'Charge - Acción Futurista en Tiempo Real', duration: 245 }
+                ]
+            },
+            {
+                id: 'ch-politica',
+                number: 103,
+                name: 'ECONOMÍA & IDEAS',
+                category: 'Política y Actualidad',
+                color: '#f59e0b',
+                programs: [
+                    { youtubeId: 'PHe0bXAIuk0', title: 'Cómo funciona la Máquina Económica - Ray Dalio', duration: 1859 },
+                    { youtubeId: '8S0FDjFBj8o', title: 'El Poder de las Ideas y el Debate Público (TED)', duration: 1140 },
+                    { youtubeId: 'iCvmsMzlF7o', title: 'Sociedad, Liderazgo y Resiliencia Humana', duration: 1219 },
+                    { youtubeId: 'wHGqp8lz36c', title: 'El Valor de la Educación y la Innovación Social', duration: 1320 }
+                ]
+            },
+            {
+                id: 'ch-ciencia',
+                number: 104,
+                name: 'ESPACIO & CIENCIA',
+                category: 'Ciencia y Espacio',
+                color: '#ec4899',
+                programs: [
+                    { youtubeId: 'xRPjKQtRXR8', title: 'NASA Live: La Tierra desde la Estación Espacial Internacional', duration: 3600 },
+                    { youtubeId: 'GoW8Tf7hTGA', title: 'Comparación de Tamaños del Universo Observable', duration: 640 },
+                    { youtubeId: 'uD4izuDMUQA', title: 'Timelapse del Futuro: Un Viaje al Fin del Tiempo', duration: 1761 },
+                    { youtubeId: 'MBRqu0YOH14', title: 'Nihilismo Optimista y el Lugar del Humano en el Cosmos', duration: 365 },
+                    { youtubeId: 'JhHMJCUmq28', title: 'La Paradoja de Fermi: ¿Dónde están todos?', duration: 1380 }
+                ]
+            },
+            {
+                id: 'ch-musica',
+                number: 105,
+                name: 'LO-FI & CULTURA',
+                category: 'Cultura y Música',
+                color: '#a855f7',
+                programs: [
+                    { youtubeId: 'jfKfPfyJRdk', title: 'Lofi Hip Hop Radio - Beats para Trabajar y Estudiar', duration: 3600 },
+                    { youtubeId: '4xDzrJKXOOY', title: 'Synthwave Radio - Ritmos Retrofuturistas 80s', duration: 3600 },
+                    { youtubeId: '5yx6BWlEVcY', title: 'Chillhop Radio - Jazzy & Lofi Hip Hop Beats', duration: 3600 },
+                    { youtubeId: 'rUxyKA_-grg', title: 'Ambient Space Music - Paisajes Sonoros Nocturnos', duration: 3600 }
+                ]
+            }
+        ];
+
+        // Normalizar estructura de programas para asegurar que cada ítem tenga siempre `youtubeId` limpio
+        function normalizeChannels(rawChannels) {
+            return rawChannels.map(ch => ({
+                ...ch,
+                number: Number(ch.number),
+                programs: (ch.programs || []).map(p => ({
+                    youtubeId: (p.youtubeIdClean || p.youtubeId || p.id || '').trim(),
+                    title: p.title || 'Programa sin título',
+                    duration: Math.max(60, Number(p.duration) || 600)
+                }))
+            })).sort((a, b) => a.number - b.number);
+        }
+
+        /**
+         * ============================================================================
+         * 2. ESTADO GLOBAL DE LA APLICACIÓN
+         * ============================================================================
+         */
+        const STORAGE_KEY = 'tubeflow_tv_channels_v2';
+        const PIXELS_PER_MINUTE = 4.5;
+        const EPG_WINDOW_HOURS_BEFORE = 1;
+        const EPG_WINDOW_HOURS_AFTER = 6;
+
+        let state = {
+            channels: [],
+            currentChannelId: null,
+            selectedAdminChannelId: null,
+            categoryFilter: 'ALL',
+            ytPlayer: null,
+            ytReady: false,
+            isMuted: false,
+            osdTimeout: null,
+            errorSkipTimer: null,
+            errorCountdownInterval: null,
+            activeVideoId: null,
+            manualSkipOffset: 0,
+            numericBuffer: '',
+            numericTimeout: null,
+            epgStartEpochSec: 0,
+            currentProgramSignature: ''
+        };
+
+        /**
+         * ============================================================================
+         * 3. MOTOR DE TIEMPO Y CÁLCULO DE TRANSMISIÓN LINEAL EN VIVO
+         * ============================================================================
+         */
+        function getLiveProgramAtTime(channel, targetDate = new Date(), programIndexOffset = 0) {
+            if (!channel || !channel.programs || channel.programs.length === 0) {
+                return null;
+            }
+
+            const midnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+            const elapsedTodaySec = Math.floor((targetDate.getTime() - midnight.getTime()) / 1000);
+
+            const totalCycleSec = channel.programs.reduce((acc, p) => acc + p.duration, 0);
+            if (totalCycleSec <= 0) return null;
+
+            const positionInCycle = ((elapsedTodaySec % totalCycleSec) + totalCycleSec) % totalCycleSec;
+
+            let accumulated = 0;
+            for (let i = 0; i < channel.programs.length; i++) {
+                const prog = channel.programs[i];
+                if (positionInCycle >= accumulated && positionInCycle < accumulated + prog.duration) {
+                    const effectiveIndex = (i + programIndexOffset) % channel.programs.length;
+                    const effectiveProg = channel.programs[effectiveIndex];
+                    const seekSeconds = programIndexOffset === 0 ? (positionInCycle - accumulated) : 0;
+                    const remainingSeconds = effectiveProg.duration - seekSeconds;
+                    const startEpochMs = targetDate.getTime() - (seekSeconds * 1000);
+                    const endEpochMs = startEpochMs + (effectiveProg.duration * 1000);
+                    const nextProg = channel.programs[(effectiveIndex + 1) % channel.programs.length];
+
+                    return {
+                        program: effectiveProg,
+                        index: effectiveIndex,
+                        baseLiveIndex: i,
+                        seekSeconds,
+                        remainingSeconds,
+                        progressPercent: Math.min(100, Math.max(0, (seekSeconds / effectiveProg.duration) * 100)),
+                        startTime: new Date(startEpochMs),
+                        endTime: new Date(endEpochMs),
+                        nextProgram: nextProg
+                    };
+                }
+                accumulated += prog.duration;
+            }
+            return null;
+        }
+
+        function getChannelScheduleWindow(channel, windowStartDate, windowEndDate) {
+            if (!channel || !channel.programs || channel.programs.length === 0) return [];
+
+            const totalCycleSec = channel.programs.reduce((acc, p) => acc + p.duration, 0);
+            if (totalCycleSec <= 0) return [];
+
+            const midnight = new Date(windowStartDate.getFullYear(), windowStartDate.getMonth(), windowStartDate.getDate(), 0, 0, 0);
+            const elapsedAtStartSec = Math.floor((windowStartDate.getTime() - midnight.getTime()) / 1000);
+            const positionInCycle = ((elapsedAtStartSec % totalCycleSec) + totalCycleSec) % totalCycleSec;
+
+            let accumulated = 0;
+            let currentIdx = 0;
+            let offsetInFirstProg = 0;
+
+            for (let i = 0; i < channel.programs.length; i++) {
+                if (positionInCycle >= accumulated && positionInCycle < accumulated + channel.programs[i].duration) {
+                    currentIdx = i;
+                    offsetInFirstProg = positionInCycle - accumulated;
+                    break;
+                }
+                accumulated += channel.programs[i].duration;
+            }
+
+            const blocks = [];
+            let cursorMs = windowStartDate.getTime() - (offsetInFirstProg * 1000);
+            const endMs = windowEndDate.getTime();
+            let safetyCounter = 0;
+
+            while (cursorMs < endMs && safetyCounter < 200) {
+                const prog = channel.programs[currentIdx];
+                const progStartMs = cursorMs;
+                const progEndMs = cursorMs + (prog.duration * 1000);
+
+                blocks.push({
+                    program: prog,
+                    index: currentIdx,
+                    startTime: new Date(progStartMs),
+                    endTime: new Date(progEndMs)
+                });
+
+                cursorMs = progEndMs;
+                currentIdx = (currentIdx + 1) % channel.programs.length;
+                safetyCounter++;
+            }
+
+            return blocks;
+        }
+
+        function formatTimeHHMM(date) {
+            return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        function formatTimeHHMMSS(date) {
+            return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        }
+
+        function formatMinutesLabel(seconds) {
+            const mins = Math.max(1, Math.round(seconds / 60));
+            if (mins < 60) return `${mins} min`;
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return m > 0 ? `${h}h ${m}m` : `${h}h`;
+        }
+
+        function extractYouTubeId(input) {
+            if (!input) return null;
+            const trimmed = input.trim();
+            if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const match = trimmed.match(regex);
+            return match ? match[1] : null;
+        }
+
+        /**
+         * ============================================================================
+         * 4. PERSISTENCIA EN LOCALSTORAGE Y EXPORTACIÓN / IMPORTACIÓN
+         * ============================================================================
+         */
+        function loadChannelsFromStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        state.channels = normalizeChannels(parsed);
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.error('Error leyendo localStorage:', err);
+            }
+            state.channels = normalizeChannels(DEFAULT_CHANNELS);
+            saveChannelsToStorage();
+        }
+
+        function saveChannelsToStorage() {
+            try {
+                state.channels.sort((a, b) => Number(a.number) - Number(b.number));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state.channels));
+            } catch (err) {
+                showToast('No se pudo guardar en el navegador (almacenamiento lleno)', 'error');
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 5. INTEGRACIÓN CON YOUTUBE IFRAME PLAYER API (CORRECCIÓN ERROR 152)
+         * ============================================================================
+         */
+        function loadYouTubeAPI() {
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        }
+
+        function applyIframeReferrerPolicy(iframeEl) {
+            if (iframeEl && iframeEl.tagName === 'IFRAME') {
+                iframeEl.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+                iframeEl.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+            }
+        }
+
+        window.onYouTubeIframeAPIReady = function() {
+            const playerVars = {
+                autoplay: 1,
+                controls: 0,
+                disablekb: 1,
+                modestbranding: 1,
+                rel: 0,
+                iv_load_policy: 3,
+                fs: 0,
+                playsinline: 1,
+                enablejsapi: 1
+            };
+
+            if (window.location.origin && window.location.origin.startsWith('http')) {
+                playerVars.origin = window.location.origin;
+            }
+
+            state.ytPlayer = new YT.Player('yt-player', {
+                height: '100%',
+                width: '100%',
+                host: 'https://www.youtube.com',
+                playerVars: playerVars,
+                events: {
+                    onReady: onPlayerReady,
+                    onStateChange: onPlayerStateChange,
+                    onError: onPlayerError
+                }
+            });
+
+            if (state.ytPlayer && typeof state.ytPlayer.getIframe === 'function') {
+                applyIframeReferrerPolicy(state.ytPlayer.getIframe());
+            }
+        };
+
+        function onPlayerReady(event) {
+            state.ytReady = true;
+            if (event && event.target && typeof event.target.getIframe === 'function') {
+                applyIframeReferrerPolicy(event.target.getIframe());
+            }
+            if (state.channels.length > 0) {
+                tuneChannel(state.channels[0].id, true);
+            }
+        }
+
+        function clearErrorRecoveryTimers() {
+            if (state.errorSkipTimer) {
+                clearTimeout(state.errorSkipTimer);
+                state.errorSkipTimer = null;
+            }
+            if (state.errorCountdownInterval) {
+                clearInterval(state.errorCountdownInterval);
+                state.errorCountdownInterval = null;
+            }
+        }
+
+        function hidePlayerStatusOverlay() {
+            clearErrorRecoveryTimers();
+            document.getElementById('player-status-overlay').classList.add('hidden');
+            document.getElementById('btn-unmute-start').classList.add('hidden');
+            const extBtn = document.getElementById('btn-open-yt-external');
+            extBtn.classList.add('hidden');
+            extBtn.classList.remove('inline-flex');
+            document.getElementById('btn-skip-next-now').classList.add('hidden');
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                hidePlayerStatusOverlay();
+                if (state.ytPlayer.isMuted() && !state.isMuted) {
+                    state.isMuted = true;
+                    updateMuteIcon();
+                    showToast('Audio silenciado por el navegador. Presiona el ícono de volumen para activar.', 'info');
+                }
+            } else if (event.data === YT.PlayerState.ENDED) {
+                state.manualSkipOffset = 0;
+                syncCurrentChannelToLive(false);
+            }
+        }
+
+        function skipToNextProgramInChannel() {
+            clearErrorRecoveryTimers();
+            const ch = state.channels.find(c => c.id === state.currentChannelId);
+            if (!ch || !ch.programs || ch.programs.length === 0) return;
+
+            if (ch.programs.length === 1) {
+                showToast('Este canal solo tiene 1 programa. Agrega más desde "Administrar Canales".', 'info');
+                return;
+            }
+
+            state.manualSkipOffset = (state.manualSkipOffset + 1) % ch.programs.length;
+            const nextLiveInfo = getLiveProgramAtTime(ch, new Date(), state.manualSkipOffset);
+            if (!nextLiveInfo) return;
+
+            state.activeVideoId = nextLiveInfo.program.youtubeId;
+            state.currentProgramSignature = `${ch.id}_${nextLiveInfo.baseLiveIndex}_${nextLiveInfo.program.youtubeId}`;
+
+            hidePlayerStatusOverlay();
+            if (state.ytReady && state.ytPlayer) {
+                state.ytPlayer.loadVideoById({
+                    videoId: nextLiveInfo.program.youtubeId,
+                    startSeconds: nextLiveInfo.seekSeconds
+                });
+            }
+            updateCurrentProgramUI(ch, nextLiveInfo);
+            triggerOSD(ch, nextLiveInfo);
+        }
+
+        function onPlayerError(event) {
+            clearErrorRecoveryTimers();
+            const errorCode = event.data;
+            const isEmbedRestriction = [101, 150, 152, 153].includes(errorCode);
+            const ch = state.channels.find(c => c.id === state.currentChannelId);
+            const canAutoSkip = ch && ch.programs && ch.programs.length > 1;
+
+            const overlay = document.getElementById('player-status-overlay');
+            document.getElementById('status-icon').className = 'fa-solid fa-triangle-exclamation text-xl text-amber-400';
+            document.getElementById('status-title').textContent = isEmbedRestriction
+                ? `Señal no disponible / Restricción de inserción (Error ${errorCode})`
+                : `Error de reproducción (Código ${errorCode})`;
+
+            const extBtn = document.getElementById('btn-open-yt-external');
+            if (state.activeVideoId) {
+                extBtn.href = `https://www.youtube.com/watch?v=${state.activeVideoId}`;
+                extBtn.classList.remove('hidden');
+                extBtn.classList.add('inline-flex');
+            }
+
+            const skipBtn = document.getElementById('btn-skip-next-now');
+            if (canAutoSkip) {
+                skipBtn.classList.remove('hidden');
+                let secondsLeft = 4;
+                document.getElementById('status-desc').textContent = `El propietario de este video bloqueó su reproducción externa. Saltando al siguiente programa en ${secondsLeft}s...`;
+
+                state.errorCountdownInterval = setInterval(() => {
+                    secondsLeft -= 1;
+                    if (secondsLeft > 0) {
+                        document.getElementById('status-desc').textContent = `El propietario de este video bloqueó su reproducción externa. Saltando al siguiente programa en ${secondsLeft}s...`;
+                    }
+                }, 1000);
+
+                state.errorSkipTimer = setTimeout(() => {
+                    skipToNextProgramInChannel();
+                }, 4000);
+            } else {
+                skipBtn.classList.add('hidden');
+                document.getElementById('status-desc').textContent = `Este video no permite inserción externa (Código ${errorCode}). Ábrelo en YouTube o reemplázalo en "Administrar Canales".`;
+            }
+
+            overlay.classList.remove('hidden');
+        }
+
+        /**
+         * ============================================================================
+         * 6. SINTONIZACIÓN DE CANALES Y CONTROL DE TV (ZAPPING / OSD)
+         * ============================================================================
+         */
+        function tuneChannel(channelId, showOsd = true) {
+            const channel = state.channels.find(c => c.id === channelId);
+            if (!channel) return;
+
+            clearErrorRecoveryTimers();
+            state.manualSkipOffset = 0;
+            state.currentChannelId = channel.id;
+            const liveInfo = getLiveProgramAtTime(channel, new Date(), 0);
+
+            document.getElementById('info-ch-number').textContent = `CH ${channel.number}`;
+            document.getElementById('info-ch-name').textContent = channel.name;
+
+            if (!liveInfo) {
+                document.getElementById('info-prog-title').textContent = 'Sin programación asignada';
+                document.getElementById('info-prog-schedule').textContent = '--:-- - --:--';
+                document.getElementById('info-prog-duration').textContent = '0 min';
+                document.getElementById('info-next-title').textContent = 'Agrega videos en el panel Admin';
+                document.getElementById('info-next-time').textContent = '';
+                
+                hidePlayerStatusOverlay();
+                const overlay = document.getElementById('player-status-overlay');
+                document.getElementById('status-icon').className = 'fa-solid fa-tv text-xl text-slate-400';
+                document.getElementById('status-title').textContent = 'Canal sin programación';
+                document.getElementById('status-desc').textContent = 'Abre "Administrar Canales" para agregar videos de YouTube a este canal.';
+                overlay.classList.remove('hidden');
+                renderEPG();
+                return;
+            }
+
+            state.activeVideoId = liveInfo.program.youtubeId;
+            state.currentProgramSignature = `${channel.id}_${liveInfo.baseLiveIndex}_${liveInfo.program.youtubeId}`;
+
+            if (state.ytReady && state.ytPlayer) {
+                hidePlayerStatusOverlay();
+                if (typeof state.ytPlayer.getIframe === 'function') {
+                    applyIframeReferrerPolicy(state.ytPlayer.getIframe());
+                }
+                state.ytPlayer.loadVideoById({
+                    videoId: liveInfo.program.youtubeId,
+                    startSeconds: liveInfo.seekSeconds
+                });
+            }
+
+            updateCurrentProgramUI(channel, liveInfo);
+            if (showOsd) {
+                triggerOSD(channel, liveInfo);
+            }
+            renderEPG();
+        }
+
+        function syncCurrentChannelToLive(showNotification = true) {
+            if (!state.currentChannelId) return;
+            const channel = state.channels.find(c => c.id === state.currentChannelId);
+            if (!channel) return;
+            state.manualSkipOffset = 0;
+            const liveInfo = getLiveProgramAtTime(channel, new Date(), 0);
+            if (!liveInfo) return;
+
+            state.activeVideoId = liveInfo.program.youtubeId;
+            state.currentProgramSignature = `${channel.id}_${liveInfo.baseLiveIndex}_${liveInfo.program.youtubeId}`;
+
+            if (state.ytReady && state.ytPlayer) {
+                hidePlayerStatusOverlay();
+                state.ytPlayer.loadVideoById({
+                    videoId: liveInfo.program.youtubeId,
+                    startSeconds: liveInfo.seekSeconds
+                });
+            }
+            updateCurrentProgramUI(channel, liveInfo);
+            triggerOSD(channel, liveInfo);
+            if (showNotification) {
+                showToast(`Sincronizado en vivo con ${channel.name}`, 'success');
+            }
+        }
+
+        function updateCurrentProgramUI(channel, liveInfo) {
+            document.getElementById('info-prog-title').textContent = liveInfo.program.title;
+            document.getElementById('info-prog-schedule').textContent = `${formatTimeHHMM(liveInfo.startTime)} - ${formatTimeHHMM(liveInfo.endTime)}`;
+            document.getElementById('info-prog-duration').textContent = formatMinutesLabel(liveInfo.program.duration);
+
+            if (liveInfo.nextProgram) {
+                document.getElementById('info-next-title').textContent = liveInfo.nextProgram.title;
+                document.getElementById('info-next-time').textContent = formatTimeHHMM(liveInfo.endTime);
+            } else {
+                document.getElementById('info-next-title').textContent = '---';
+                document.getElementById('info-next-time').textContent = '';
+            }
+
+            document.getElementById('osd-ch-badge').textContent = channel.number;
+            document.getElementById('osd-ch-badge').style.color = channel.color;
+            document.getElementById('osd-ch-badge').style.borderColor = `${channel.color}66`;
+            document.getElementById('osd-ch-badge').style.backgroundColor = `${channel.color}22`;
+            document.getElementById('osd-ch-name').textContent = channel.name;
+            document.getElementById('osd-ch-cat').textContent = channel.category;
+            document.getElementById('osd-prog-title').textContent = liveInfo.program.title;
+            document.getElementById('osd-time-range').textContent = `${formatTimeHHMM(liveInfo.startTime)} - ${formatTimeHHMM(liveInfo.endTime)}`;
+            const remMins = Math.max(1, Math.ceil(liveInfo.remainingSeconds / 60));
+            document.getElementById('osd-remaining').textContent = `Restan ${remMins} min`;
+            document.getElementById('osd-progress-bar').style.width = `${liveInfo.progressPercent}%`;
+            document.getElementById('osd-progress-bar').style.backgroundColor = channel.color;
+        }
+
+        function triggerOSD(channel, liveInfo) {
+            if (!channel || !liveInfo) return;
+            updateCurrentProgramUI(channel, liveInfo);
+            const osdEl = document.getElementById('tv-osd');
+            osdEl.classList.remove('hidden');
+            osdEl.classList.remove('osd-animate');
+            void osdEl.offsetWidth;
+            osdEl.classList.add('osd-animate');
+
+            if (state.osdTimeout) clearTimeout(state.osdTimeout);
+            state.osdTimeout = setTimeout(() => {
+                osdEl.classList.add('hidden');
+            }, 4500);
+        }
+
+        function zapChannel(delta) {
+            if (state.channels.length === 0) return;
+            const currentIdx = state.channels.findIndex(c => c.id === state.currentChannelId);
+            const nextIdx = (currentIdx + delta + state.channels.length) % state.channels.length;
+            const targetCh = state.channels[nextIdx];
+            tuneChannel(targetCh.id, true);
+            scrollChannelRowIntoView(targetCh.id);
+        }
+
+        function handleNumericZap(digit) {
+            state.numericBuffer += digit;
+            const numOsd = document.getElementById('numeric-zap-osd');
+            numOsd.textContent = state.numericBuffer.padEnd(3, '-');
+            numOsd.classList.remove('hidden');
+
+            if (state.numericTimeout) clearTimeout(state.numericTimeout);
+            state.numericTimeout = setTimeout(() => {
+                const targetNumber = parseInt(state.numericBuffer, 10);
+                state.numericBuffer = '';
+                numOsd.classList.add('hidden');
+
+                const found = state.channels.find(c => Number(c.number) === targetNumber);
+                if (found) {
+                    tuneChannel(found.id, true);
+                    scrollChannelRowIntoView(found.id);
+                } else {
+                    showToast(`Canal ${targetNumber} no encontrado`, 'error');
+                }
+            }, 1100);
+        }
+
+        function toggleMute() {
+            if (!state.ytReady || !state.ytPlayer) return;
+            if (state.isMuted) {
+                state.ytPlayer.unMute();
+                state.ytPlayer.setVolume(100);
+                state.isMuted = false;
+            } else {
+                state.ytPlayer.mute();
+                state.isMuted = true;
+            }
+            updateMuteIcon();
+        }
+
+        function updateMuteIcon() {
+            const icon = document.getElementById('icon-mute');
+            if (state.isMuted) {
+                icon.className = 'fa-solid fa-volume-xmark text-xs text-rose-400';
+            } else {
+                icon.className = 'fa-solid fa-volume-high text-xs text-slate-200';
+            }
+        }
+
+        function toggleFullscreen() {
+            const wrapper = document.getElementById('player-wrapper');
+            if (!document.fullscreenElement) {
+                wrapper.requestFullscreen().catch(() => {
+                    showToast('Pantalla completa no disponible en este navegador', 'info');
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 7. RENDERIZADO DE LA GRILLA EPG (ESTILO FLOW / CHANNELSURFER)
+         * ============================================================================
+         */
+        function updateCategoryFilterOptions() {
+            const select = document.getElementById('epg-category-filter');
+            const currentVal = select.value;
+            const categories = [...new Set(state.channels.map(c => c.category).filter(Boolean))];
+
+            select.innerHTML = `<option value="ALL">Todos los canales (${state.channels.length})</option>`;
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                select.appendChild(opt);
+            });
+
+            if (categories.includes(currentVal) || currentVal === 'ALL') {
+                select.value = currentVal;
+            } else {
+                select.value = 'ALL';
+                state.categoryFilter = 'ALL';
+            }
+        }
+
+        function renderEPG() {
+            updateCategoryFilterOptions();
+
+            const now = new Date();
+            const windowStart = new Date(now);
+            windowStart.setMinutes(0, 0, 0);
+            windowStart.setHours(windowStart.getHours() - EPG_WINDOW_HOURS_BEFORE);
+
+            const windowEnd = new Date(windowStart);
+            windowEnd.setHours(windowEnd.getHours() + EPG_WINDOW_HOURS_BEFORE + EPG_WINDOW_HOURS_AFTER);
+
+            state.epgStartEpochSec = Math.floor(windowStart.getTime() / 1000);
+            const totalMinutes = Math.floor((windowEnd.getTime() - windowStart.getTime()) / 60000);
+            const totalTimelineWidthPx = totalMinutes * PIXELS_PER_MINUTE;
+
+            const timelineHeader = document.getElementById('epg-timeline-header');
+            timelineHeader.style.width = `${totalTimelineWidthPx}px`;
+            timelineHeader.innerHTML = '';
+
+            const slotCursor = new Date(windowStart);
+            while (slotCursor < windowEnd) {
+                const offsetMins = (slotCursor.getTime() - windowStart.getTime()) / 60000;
+                const leftPx = offsetMins * PIXELS_PER_MINUTE;
+
+                const marker = document.createElement('div');
+                marker.className = 'absolute top-0 bottom-0 border-l border-tv-border/80 px-2 flex items-center text-[11px] font-mono text-slate-300 font-semibold';
+                marker.style.left = `${leftPx}px`;
+                marker.textContent = formatTimeHHMM(slotCursor);
+                timelineHeader.appendChild(marker);
+
+                slotCursor.setMinutes(slotCursor.getMinutes() + 30);
+            }
+
+            const bodyContainer = document.getElementById('epg-channels-body');
+            bodyContainer.innerHTML = '';
+
+            const filteredChannels = state.categoryFilter === 'ALL'
+                ? state.channels
+                : state.channels.filter(c => c.category === state.categoryFilter);
+
+            if (filteredChannels.length === 0) {
+                bodyContainer.innerHTML = `
+                    <div class="p-8 text-center text-slate-400 text-sm">
+                        No hay canales en esta categoría. Usa el botón <strong>Administrar Canales</strong> para crear nuevos.
+                    </div>
+                `;
+                updateNowLinePosition();
+                return;
+            }
+
+            filteredChannels.forEach(channel => {
+                const isCurrentChannel = channel.id === state.currentChannelId;
+                const row = document.createElement('div');
+                row.id = `epg-row-${channel.id}`;
+                row.className = `flex h-16 transition-colors ${isCurrentChannel ? 'bg-tv-card/90' : 'bg-tv-bg hover:bg-tv-panel/70'}`;
+
+                const chBadgeCol = document.createElement('div');
+                chBadgeCol.className = `sticky left-0 z-10 w-36 sm:w-48 shrink-0 border-r border-tv-border px-3 flex items-center justify-between cursor-pointer transition ${isCurrentChannel ? 'bg-tv-card border-l-4' : 'bg-tv-panel hover:bg-tv-hover'}`;
+                if (isCurrentChannel) {
+                    chBadgeCol.style.borderLeftColor = channel.color;
+                }
+                chBadgeCol.onclick = () => tuneChannel(channel.id, true);
+
+                chBadgeCol.innerHTML = `
+                    <div class="min-w-0 pr-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${channel.color}"></span>
+                            <span class="font-bold text-xs sm:text-sm text-white truncate">${escapeHtml(channel.name)}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 truncate mt-0.5">${escapeHtml(channel.category)}</div>
+                    </div>
+                    <div class="font-mono text-xs sm:text-sm font-extrabold px-1.5 py-0.5 rounded ${isCurrentChannel ? 'bg-tv-accent text-slate-950' : 'bg-tv-bg text-slate-300'}">
+                        ${channel.number}
+                    </div>
+                `;
+
+                const timelineTrack = document.createElement('div');
+                timelineTrack.className = 'relative h-full overflow-hidden';
+                timelineTrack.style.width = `${totalTimelineWidthPx}px`;
+
+                const blocks = getChannelScheduleWindow(channel, windowStart, windowEnd);
+
+                blocks.forEach(block => {
+                    const blockStartMs = Math.max(block.startTime.getTime(), windowStart.getTime());
+                    const blockEndMs = Math.min(block.endTime.getTime(), windowEnd.getTime());
+                    const visibleDurationMins = (blockEndMs - blockStartMs) / 60000;
+                    if (visibleDurationMins <= 0.5) return;
+
+                    const leftPx = ((blockStartMs - windowStart.getTime()) / 60000) * PIXELS_PER_MINUTE;
+                    const widthPx = visibleDurationMins * PIXELS_PER_MINUTE;
+                    const isAiringNow = now.getTime() >= block.startTime.getTime() && now.getTime() < block.endTime.getTime();
+
+                    const progEl = document.createElement('div');
+                    progEl.className = `absolute top-1 bottom-1 rounded-lg border px-2.5 py-1.5 flex flex-col justify-center cursor-pointer transition overflow-hidden group ${
+                        isAiringNow && isCurrentChannel
+                            ? 'bg-cyan-950/80 border-tv-accent text-white shadow-md'
+                            : isAiringNow
+                                ? 'bg-tv-card border-slate-600/80 text-slate-100 hover:border-tv-accent/60'
+                                : 'bg-tv-panel/70 border-tv-border/70 text-slate-300 hover:bg-tv-hover hover:border-slate-600'
+                    }`;
+                    progEl.style.left = `${leftPx + 1}px`;
+                    progEl.style.width = `${Math.max(4, widthPx - 2)}px`;
+                    progEl.title = `${block.program.title} (${formatTimeHHMM(block.startTime)} - ${formatTimeHHMM(block.endTime)})`;
+
+                    progEl.onclick = () => {
+                        if (isAiringNow) {
+                            tuneChannel(channel.id, true);
+                        } else {
+                            tuneChannel(channel.id, true);
+                            showToast(`Sintonizando ${channel.name} en vivo (programa "${block.program.title}" inicia a las ${formatTimeHHMM(block.startTime)})`, 'info');
+                        }
+                    };
+
+                    progEl.innerHTML = `
+                        <div class="flex items-center gap-1.5">
+                            ${isAiringNow ? `<span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${channel.color}"></span>` : ''}
+                            <span class="text-xs font-semibold truncate group-hover:text-white">${escapeHtml(block.program.title)}</span>
+                        </div>
+                        <div class="text-[10px] font-mono text-slate-400 truncate mt-0.5">
+                            ${formatTimeHHMM(block.startTime)} - ${formatTimeHHMM(block.endTime)}
+                        </div>
+                    `;
+
+                    timelineTrack.appendChild(progEl);
+                });
+
+                row.appendChild(chBadgeCol);
+                row.appendChild(timelineTrack);
+                bodyContainer.appendChild(row);
+            });
+
+            updateNowLinePosition();
+        }
+
+        function updateNowLinePosition() {
+            const nowLine = document.getElementById('epg-now-line');
+            const nowSec = Math.floor(Date.now() / 1000);
+            const diffMins = (nowSec - state.epgStartEpochSec) / 60;
+            const sidebarWidth = window.innerWidth < 640 ? 144 : 192;
+            const leftPx = sidebarWidth + (diffMins * PIXELS_PER_MINUTE);
+            nowLine.style.left = `${Math.max(sidebarWidth, leftPx)}px`;
+        }
+
+        function scrollToNowInEPG() {
+            const container = document.getElementById('epg-scroll-container');
+            const nowSec = Math.floor(Date.now() / 1000);
+            const diffMins = (nowSec - state.epgStartEpochSec) / 60;
+            const targetScrollLeft = Math.max(0, (diffMins * PIXELS_PER_MINUTE) - 120);
+            container.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+        }
+
+        function scrollChannelRowIntoView(channelId) {
+            const row = document.getElementById(`epg-row-${channelId}`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 8. PANEL DE ADMINISTRACIÓN DE CANALES Y VIDEOS (CRUD COMPLETO)
+         * ============================================================================
+         */
+        function openAdminModal() {
+            if (!state.selectedAdminChannelId && state.channels.length > 0) {
+                state.selectedAdminChannelId = state.currentChannelId || state.channels[0].id;
+            }
+            renderAdminModal();
+            document.getElementById('admin-modal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('admin-modal').classList.add('hidden');
+            renderEPG();
+        }
+
+        function renderAdminModal() {
+            const listEl = document.getElementById('admin-channel-list');
+            listEl.innerHTML = '';
+
+            state.channels.forEach(ch => {
+                const isSelected = ch.id === state.selectedAdminChannelId;
+                const item = document.createElement('button');
+                item.className = `w-full text-left px-3 py-2.5 rounded-xl border transition flex items-center justify-between cursor-pointer ${
+                    isSelected
+                        ? 'bg-tv-card border-tv-accent text-white shadow-sm'
+                        : 'bg-transparent border-transparent hover:bg-tv-card/60 text-slate-300'
+                }`;
+                item.onclick = () => {
+                    state.selectedAdminChannelId = ch.id;
+                    renderAdminModal();
+                };
+
+                item.innerHTML = `
+                    <div class="min-w-0 pr-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${ch.color}"></span>
+                            <span class="font-bold text-xs truncate">${escapeHtml(ch.name)}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 truncate pl-4">${escapeHtml(ch.category)} • ${ch.programs.length} videos</div>
+                    </div>
+                    <span class="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-tv-bg text-tv-accent border border-tv-border">
+                        ${ch.number}
+                    </span>
+                `;
+                listEl.appendChild(item);
+            });
+
+            const editorPane = document.getElementById('admin-editor-pane');
+            const selectedCh = state.channels.find(c => c.id === state.selectedAdminChannelId);
+
+            if (!selectedCh) {
+                editorPane.classList.add('opacity-40', 'pointer-events-none');
+                return;
+            }
+            editorPane.classList.remove('opacity-40', 'pointer-events-none');
+
+            document.getElementById('edit-ch-number').value = selectedCh.number;
+            document.getElementById('edit-ch-name').value = selectedCh.name;
+            document.getElementById('edit-ch-category').value = selectedCh.category;
+            document.getElementById('edit-ch-color').value = selectedCh.color;
+
+            const playlistEl = document.getElementById('admin-playlist-items');
+            playlistEl.innerHTML = '';
+
+            const totalSec = selectedCh.programs.reduce((acc, p) => acc + p.duration, 0);
+            document.getElementById('admin-playlist-total-dur').textContent = `Duración total del ciclo: ${formatMinutesLabel(totalSec)}`;
+
+            if (selectedCh.programs.length === 0) {
+                playlistEl.innerHTML = `
+                    <div class="border border-dashed border-tv-border rounded-xl p-6 text-center text-xs text-slate-400">
+                        Este canal aún no tiene videos. Agrega al menos un video arriba para que comience a transmitir.
+                    </div>
+                `;
+                return;
+            }
+
+            selectedCh.programs.forEach((prog, idx) => {
+                const row = document.createElement('div');
+                row.className = 'bg-tv-bg border border-tv-border rounded-xl p-3 flex items-center justify-between gap-3 group';
+                row.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="font-mono text-xs text-slate-500 w-5 text-center">${idx + 1}</span>
+                        <img src="https://i.ytimg.com/vi/${prog.youtubeId}/default.jpg" alt="" class="w-14 h-10 object-cover rounded bg-tv-card shrink-0" onerror="this.src='https://placehold.co/120x90/181e2c/00e5ff?text=TV'">
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold text-slate-100 truncate">${escapeHtml(prog.title)}</div>
+                            <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 mt-0.5">
+                                <span>ID: ${prog.youtubeId}</span>
+                                <span>•</span>
+                                <span class="text-tv-accent">${formatMinutesLabel(prog.duration)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button data-action="up" data-idx="${idx}" title="Subir orden" class="w-7 h-7 rounded bg-tv-card hover:bg-tv-hover text-slate-300 text-xs flex items-center justify-center cursor-pointer ${idx === 0 ? 'opacity-30 pointer-events-none' : ''}">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </button>
+                        <button data-action="down" data-idx="${idx}" title="Bajar orden" class="w-7 h-7 rounded bg-tv-card hover:bg-tv-hover text-slate-300 text-xs flex items-center justify-center cursor-pointer ${idx === selectedCh.programs.length - 1 ? 'opacity-30 pointer-events-none' : ''}">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </button>
+                        <button data-action="delete" data-idx="${idx}" title="Quitar programa" class="w-7 h-7 rounded bg-rose-950/50 hover:bg-rose-900 text-rose-400 text-xs flex items-center justify-center ml-1 cursor-pointer">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+                row.querySelectorAll('button').forEach(btn => {
+                    btn.onclick = () => {
+                        const action = btn.dataset.action;
+                        const index = Number(btn.dataset.idx);
+                        if (action === 'up' && index > 0) {
+                            [selectedCh.programs[index - 1], selectedCh.programs[index]] = [selectedCh.programs[index], selectedCh.programs[index - 1]];
+                        } else if (action === 'down' && index < selectedCh.programs.length - 1) {
+                            [selectedCh.programs[index + 1], selectedCh.programs[index]] = [selectedCh.programs[index], selectedCh.programs[index + 1]];
+                        } else if (action === 'delete') {
+                            selectedCh.programs.splice(index, 1);
+                        }
+                        saveChannelsToStorage();
+                        renderAdminModal();
+                        if (selectedCh.id === state.currentChannelId) {
+                            tuneChannel(selectedCh.id, false);
+                        }
+                    };
+                });
+
+                playlistEl.appendChild(row);
+            });
+        }
+
+        async function autoFetchYouTubeMetadata() {
+            const rawUrl = document.getElementById('add-vid-url').value;
+            const videoId = extractYouTubeId(rawUrl);
+            const feedback = document.getElementById('yt-fetch-feedback');
+
+            if (!videoId) {
+                showToast('Ingresa una URL o ID válido de YouTube primero', 'error');
+                return;
+            }
+
+            feedback.textContent = 'Consultando título y duración del video...';
+            feedback.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+                const data = await res.json();
+                if (data && data.title) {
+                    document.getElementById('add-vid-title').value = data.title;
+                }
+            } catch (e) {
+                // Ignorar fallo de CORS/red si ocurre
+            }
+
+            if (window.YT && YT.Player) {
+                const probeContainer = document.getElementById('yt-probe-container');
+                probeContainer.innerHTML = '<div id="yt-probe-player"></div>';
+                
+                const probeVars = { autoplay: 0, mute: 1, enablejsapi: 1 };
+                if (window.location.origin && window.location.origin.startsWith('http')) {
+                    probeVars.origin = window.location.origin;
+                }
+
+                const probePlayer = new YT.Player('yt-probe-player', {
+                    videoId: videoId,
+                    host: 'https://www.youtube.com',
+                    playerVars: probeVars,
+                    events: {
+                        onReady: (ev) => {
+                            if (typeof ev.target.getIframe === 'function') {
+                                applyIframeReferrerPolicy(ev.target.getIframe());
+                            }
+                            const durSec = ev.target.getDuration();
+                            if (durSec && durSec > 0) {
+                                const mins = Math.max(1, Math.round(durSec / 60));
+                                document.getElementById('add-vid-duration').value = mins;
+                                feedback.textContent = `¡Listo! Duración detectada: ${mins} minutos. Inserción verificada.`;
+                                feedback.className = 'mt-2 text-[11px] text-emerald-400';
+                            } else {
+                                feedback.textContent = 'Video en vivo o duración no disponible; ingresa los minutos manualmente.';
+                                feedback.className = 'mt-2 text-[11px] text-amber-400';
+                            }
+                            ev.target.destroy();
+                        },
+                        onError: (ev) => {
+                            const code = ev.data;
+                            if ([101, 150, 152, 153].includes(code)) {
+                                feedback.textContent = `Advertencia (Error ${code}): Este video tiene restricciones de inserción del autor y no se reproducirá en la guía.`;
+                                feedback.className = 'mt-2 text-[11px] text-rose-400 font-semibold';
+                            } else {
+                                feedback.textContent = 'No se pudo leer la duración automáticamente. Ingrésala manualmente.';
+                                feedback.className = 'mt-2 text-[11px] text-amber-400';
+                            }
+                        }
+                    }
+                });
+                if (probePlayer && typeof probePlayer.getIframe === 'function') {
+                    applyIframeReferrerPolicy(probePlayer.getIframe());
+                }
+            }
+        }
+
+        function testVideoEmbeddable() {
+            const rawUrl = document.getElementById('add-vid-url').value;
+            const videoId = extractYouTubeId(rawUrl);
+            const feedback = document.getElementById('yt-fetch-feedback');
+
+            if (!videoId) {
+                showToast('Ingresa una URL o ID válido de YouTube para probar', 'error');
+                return;
+            }
+
+            if (!window.YT || !YT.Player) {
+                showToast('La API de YouTube aún está cargando, intenta en un segundo', 'info');
+                return;
+            }
+
+            feedback.textContent = `Probando permiso de inserción para ID "${videoId}"...`;
+            feedback.className = 'mt-2 text-[11px] text-cyan-400';
+            feedback.classList.remove('hidden');
+
+            const probeContainer = document.getElementById('yt-probe-container');
+            probeContainer.innerHTML = '<div id="yt-probe-player"></div>';
+
+            const probeVars = { autoplay: 1, mute: 1, controls: 0, enablejsapi: 1 };
+            if (window.location.origin && window.location.origin.startsWith('http')) {
+                probeVars.origin = window.location.origin;
+            }
+
+            let finished = false;
+            const cleanup = (player) => {
+                finished = true;
+                try { player.destroy(); } catch (e) {}
+            };
+
+            const probePlayer = new YT.Player('yt-probe-player', {
+                videoId: videoId,
+                host: 'https://www.youtube.com',
+                playerVars: probeVars,
+                events: {
+                    onReady: (ev) => {
+                        if (typeof ev.target.getIframe === 'function') {
+                            applyIframeReferrerPolicy(ev.target.getIframe());
+                        }
+                        ev.target.mute();
+                        ev.target.playVideo();
+                    },
+                    onStateChange: (ev) => {
+                        if (!finished && (ev.data === YT.PlayerState.PLAYING || ev.data === YT.PlayerState.BUFFERING)) {
+                            const durSec = ev.target.getDuration();
+                            if (durSec && durSec > 0 && !document.getElementById('add-vid-duration').value) {
+                                document.getElementById('add-vid-duration').value = Math.max(1, Math.round(durSec / 60));
+                            }
+                            feedback.textContent = `✓ Inserción permitida: El video "${videoId}" es compatible con TubeFlow TV.`;
+                            feedback.className = 'mt-2 text-[11px] text-emerald-400 font-semibold';
+                            showToast('¡Video compatible con inserción!', 'success');
+                            cleanup(ev.target);
+                        }
+                    },
+                    onError: (ev) => {
+                        if (!finished) {
+                            const code = ev.data;
+                            feedback.textContent = `✕ Bloqueado (Error ${code}): El propietario deshabilitó la inserción externa de este video.`;
+                            feedback.className = 'mt-2 text-[11px] text-rose-400 font-semibold';
+                            showToast(`Video bloqueado para inserción (Error ${code})`, 'error');
+                            cleanup(ev.target);
+                        }
+                    }
+                }
+            });
+
+            if (probePlayer && typeof probePlayer.getIframe === 'function') {
+                applyIframeReferrerPolicy(probePlayer.getIframe());
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 9. UTILIDADES UI (TOASTS Y ESCAPE HTML)
+         * ============================================================================
+         */
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'bg-emerald-950/95 border-emerald-500/60 text-emerald-200',
+                error: 'bg-rose-950/95 border-rose-500/60 text-rose-200',
+                info: 'bg-tv-panel/95 border-tv-accent/60 text-slate-100'
+            };
+            const icons = {
+                success: 'fa-circle-check text-emerald-400',
+                error: 'fa-circle-exclamation text-rose-400',
+                info: 'fa-tv text-tv-accent'
+            };
+
+            toast.className = `px-4 py-2.5 rounded-xl border backdrop-blur-md shadow-xl text-xs font-medium flex items-center gap-2.5 osd-animate ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        /**
+         * ============================================================================
+         * 10. EVENTOS Y BUCLE PRINCIPAL EN TIEMPO REAL
+         * ============================================================================
+         */
+        function setupEventListeners() {
+            document.getElementById('btn-ch-up').onclick = () => zapChannel(1);
+            document.getElementById('btn-ch-down').onclick = () => zapChannel(-1);
+            document.getElementById('btn-mute').onclick = toggleMute;
+            document.getElementById('btn-sync-live').onclick = () => syncCurrentChannelToLive(true);
+            document.getElementById('btn-skip-next-now').onclick = skipToNextProgramInChannel;
+            document.getElementById('btn-show-osd').onclick = () => {
+                const ch = state.channels.find(c => c.id === state.currentChannelId);
+                if (ch) triggerOSD(ch, getLiveProgramAtTime(ch, new Date(), state.manualSkipOffset));
+            };
+            document.getElementById('btn-fullscreen').onclick = toggleFullscreen;
+
+            document.getElementById('epg-category-filter').onchange = (e) => {
+                state.categoryFilter = e.target.value;
+                renderEPG();
+            };
+            document.getElementById('btn-scroll-now').onclick = scrollToNowInEPG;
+
+            document.getElementById('btn-open-admin').onclick = openAdminModal;
+            document.getElementById('btn-close-admin').onclick = closeAdminModal;
+
+            document.getElementById('btn-new-channel').onclick = () => {
+                const maxNum = state.channels.reduce((max, c) => Math.max(max, Number(c.number)), 100);
+                const newCh = {
+                    id: `ch-${Date.now()}`,
+                    number: maxNum + 1,
+                    name: `CANAL ${maxNum + 1}`,
+                    category: 'General',
+                    color: '#38bdf8',
+                    programs: [
+                        { youtubeId: 'aqz-KE-bpKQ', title: 'Big Buck Bunny - Emisión de Prueba 4K', duration: 635 }
+                    ]
+                };
+                state.channels.push(newCh);
+                saveChannelsToStorage();
+                state.selectedAdminChannelId = newCh.id;
+                renderAdminModal();
+                showToast(`Canal ${newCh.number} creado`, 'success');
+            };
+
+            document.getElementById('btn-save-channel-meta').onclick = () => {
+                const ch = state.channels.find(c => c.id === state.selectedAdminChannelId);
+                if (!ch) return;
+
+                const num = parseInt(document.getElementById('edit-ch-number').value, 10);
+                const name = document.getElementById('edit-ch-name').value.trim();
+                const category = document.getElementById('edit-ch-category').value.trim() || 'General';
+                const color = document.getElementById('edit-ch-color').value;
+
+                if (!num || num < 1) {
+                    showToast('Ingresa un número de canal válido', 'error');
+                    return;
+                }
+                if (!name) {
+                    showToast('El nombre del canal no puede estar vacío', 'error');
+                    return;
+                }
+
+                ch.number = num;
+                ch.name = name;
+                ch.category = category;
+                ch.color = color;
+
+                saveChannelsToStorage();
+                renderAdminModal();
+                if (ch.id === state.currentChannelId) {
+                    document.getElementById('info-ch-number').textContent = `CH ${ch.number}`;
+                    document.getElementById('info-ch-name').textContent = ch.name;
+                }
+                showToast('Datos del canal actualizados', 'success');
+            };
+
+            document.getElementById('btn-delete-channel').onclick = () => {
+                if (state.channels.length <= 1) {
+                    showToast('Debe existir al menos un canal en la guía', 'error');
+                    return;
+                }
+                const idx = state.channels.findIndex(c => c.id === state.selectedAdminChannelId);
+                if (idx === -1) return;
+
+                const deleted = state.channels.splice(idx, 1)[0];
+                saveChannelsToStorage();
+                state.selectedAdminChannelId = state.channels[0].id;
+                renderAdminModal();
+                if (deleted.id === state.currentChannelId) {
+                    tuneChannel(state.channels[0].id, true);
+                }
+                showToast(`Canal ${deleted.name} eliminado`, 'info');
+            };
+
+            document.getElementById('btn-fetch-yt-meta').onclick = autoFetchYouTubeMetadata;
+            document.getElementById('btn-test-embed').onclick = testVideoEmbeddable;
+            document.getElementById('btn-add-video').onclick = () => {
+                const ch = state.channels.find(c => c.id === state.selectedAdminChannelId);
+                if (!ch) return;
+
+                const rawUrl = document.getElementById('add-vid-url').value;
+                const videoId = extractYouTubeId(rawUrl);
+                const title = document.getElementById('add-vid-title').value.trim();
+                const durationMins = parseInt(document.getElementById('add-vid-duration').value, 10);
+
+                if (!videoId) {
+                    showToast('URL o ID de YouTube inválido', 'error');
+                    return;
+                }
+                if (!title) {
+                    showToast('Escribe un título para el programa', 'error');
+                    return;
+                }
+                if (!durationMins || durationMins < 1) {
+                    showToast('La duración debe ser al menos 1 minuto', 'error');
+                    return;
+                }
+
+                ch.programs.push({
+                    youtubeId: videoId,
+                    title: title,
+                    duration: durationMins * 60
+                });
+
+                saveChannelsToStorage();
+                document.getElementById('add-vid-url').value = '';
+                document.getElementById('add-vid-title').value = '';
+                document.getElementById('yt-fetch-feedback').classList.add('hidden');
+
+                renderAdminModal();
+                if (ch.id === state.currentChannelId) {
+                    tuneChannel(ch.id, false);
+                }
+                showToast('Programa agregado a la parrilla', 'success');
+            };
+
+            document.getElementById('btn-export-json').onclick = () => {
+                const dataStr = JSON.stringify(state.channels, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `tubeflow-tv-guia-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('Guía exportada en formato JSON', 'success');
+            };
+
+            document.getElementById('input-import-json').onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const imported = JSON.parse(ev.target.result);
+                        if (!Array.isArray(imported) || imported.length === 0) {
+                            throw new Error('Formato inválido');
+                        }
+                        state.channels = normalizeChannels(imported);
+                        saveChannelsToStorage();
+                        state.selectedAdminChannelId = state.channels[0].id;
+                        renderAdminModal();
+                        tuneChannel(state.channels[0].id, true);
+                        showToast('Guía importada correctamente', 'success');
+                    } catch (err) {
+                        showToast('El archivo JSON no tiene un formato válido', 'error');
+                    }
+                    e.target.value = '';
+                };
+                reader.readAsText(file);
+            };
+
+            document.getElementById('btn-reset-defaults').onclick = () => {
+                state.channels = normalizeChannels(DEFAULT_CHANNELS);
+                saveChannelsToStorage();
+                state.selectedAdminChannelId = state.channels[0].id;
+                renderAdminModal();
+                tuneChannel(state.channels[0].id, true);
+                showToast('Canales originales restaurados', 'info');
+            };
+
+            document.addEventListener('keydown', (e) => {
+                if (!document.getElementById('admin-modal').classList.contains('hidden')) {
+                    if (e.key === 'Escape') closeAdminModal();
+                    return;
+                }
+                if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    zapChannel(1);
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    zapChannel(-1);
+                } else if (e.key >= '0' && e.key <= '9') {
+                    handleNumericZap(e.key);
+                } else if (e.key.toLowerCase() === 'm') {
+                    toggleMute();
+                } else if (e.key.toLowerCase() === 'f') {
+                    toggleFullscreen();
+                } else if (e.key.toLowerCase() === 'i') {
+                    const ch = state.channels.find(c => c.id === state.currentChannelId);
+                    if (ch) triggerOSD(ch, getLiveProgramAtTime(ch, new Date(), state.manualSkipOffset));
+                }
+            });
+
+            window.addEventListener('resize', updateNowLinePosition);
+        }
+
+        function startLiveClockAndSyncLoop() {
+            const clockEl = document.getElementById('live-clock');
+            const dateLabelEl = document.getElementById('epg-date-label');
+
+            setInterval(() => {
+                const now = new Date();
+                clockEl.textContent = formatTimeHHMMSS(now);
+
+                const dateStr = now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' });
+                dateLabelEl.textContent = `• ${dateStr.charAt(0).toUpperCase() + dateStr.slice(1)}`;
+
+                updateNowLinePosition();
+
+                if (state.currentChannelId) {
+                    const ch = state.channels.find(c => c.id === state.currentChannelId);
+                    if (ch) {
+                        const liveInfo = getLiveProgramAtTime(ch, now, state.manualSkipOffset);
+                        if (liveInfo) {
+                            const newSig = `${ch.id}_${liveInfo.baseLiveIndex}_${liveInfo.program.youtubeId}`;
+                            if (state.currentProgramSignature && newSig !== state.currentProgramSignature) {
+                                tuneChannel(ch.id, true);
+                            } else {
+                                updateCurrentProgramUI(ch, liveInfo);
+                            }
+                        }
+                    }
+                }
+            }, 1000);
+        }
+
+        window.onload = function() {
+            loadChannelsFromStorage();
+            setupEventListeners();
+            renderEPG();
+            scrollToNowInEPG();
+            startLiveClockAndSyncLoop();
+            loadYouTubeAPI();
+        };
+    </script>
+</body>
+</html>
